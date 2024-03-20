@@ -187,6 +187,69 @@ public class Take4 {
         return options;
     }
 
+    public static Map<Pair, Double> inner2(int a, int b) {
+        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
+        ArrayDeque<Triple> queue = new ArrayDeque<>();
+        queue.add(new Triple(a, b, 1.));
+
+        while (!queue.isEmpty()) {
+            Triple curr = queue.pop();
+            int acurr = curr.first, bcurr = curr.second;
+            double ccurr = curr.third;
+
+            Pair p = p(acurr, bcurr);
+            if (options.containsKey(p)) {
+                options.put(p, options.get(p) + ccurr); // Update probability by adding
+            } else {
+                options.put(p, ccurr);
+            }
+
+            if (acurr <= 0 || bcurr <= 0) continue; // Skip further calculations if one of the troops is depleted
+            int deaths = calcDeaths(acurr, bcurr);
+            if (deaths == 0) continue; // No deaths, nothing to calculate
+            for (var cas : deaths == 1 ? oneCasOps : twoCasOps) {
+                double probNext = ccurr * chanceInOut(acurr, bcurr, acurr - cas.first, bcurr - cas.second);
+                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
+            }
+        }
+
+        return options;
+    }
+
+    public static Map<Pair, Double> inner3(int a, int b) {
+        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
+        ArrayDeque<Triple> queue = new ArrayDeque<>();
+        queue.add(new Triple(a, b, 1.));
+
+        while (!queue.isEmpty()) {
+            Triple curr = queue.pop();
+            int acurr = curr.first, bcurr = curr.second;
+            double ccurr = curr.third;
+
+            Pair p = p(acurr, bcurr);
+            if (options.containsKey(p)) {
+                options.put(p, options.get(p) + ccurr); // Update probability by adding
+            } else {
+                options.put(p, ccurr);
+            }
+
+            if (acurr <= 0 || bcurr <= 0) continue; // Skip further calculations if one of the troops is depleted
+            int deaths = calcDeaths(acurr, bcurr);
+            if (deaths == 0) continue; // No deaths, nothing to calculate
+            for (var cas : deaths == 1 ? oneCasOps : twoCasOps) {
+                double probNext = ccurr * chanceInOut(acurr, bcurr, acurr - cas.first, bcurr - cas.second);
+                queue.stream().filter(it -> it.first == acurr - cas.first && it.second == bcurr - cas.second)
+                                .findFirst()
+                                .ifPresentOrElse(it -> it.third += probNext,
+                                                () -> queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext)));
+//                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
+            }
+        }
+
+        return options;
+    }
+
+
     public static void main(String[] args) {
         Scanner s = new Scanner(System.in);
         System.out.println("""
@@ -203,11 +266,13 @@ public class Take4 {
             try {
                 int i = Integer.parseInt(a), j = Integer.parseInt(b);
                 if (i <= 0 || j <= 0) throw new NumberFormatException("Bad number");
-                printOutcomes(outer(i, j));
+//                printOutcomes(outer(i, j));
 //                System.out.println("inner:");
 //                printOutcomes(inner(i, j));
-//                System.out.println("otherInner:");
-//                printOutcomes(otherInner(i, j));
+//                System.out.println("inner2:");
+//                printOutcomes(inner2(i, j));
+                System.out.println("inner3:");
+                printOutcomes(inner3(i, j));
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }
@@ -236,6 +301,32 @@ public class Take4 {
                 .filter(it -> !(it.getKey().first > 0 && it.getKey().second > 0))
                 .mapToDouble(Map.Entry::getValue)
                 .sum());
+
+
+        System.out.printf("""
+                Chances are %s that Attackers win
+                and %s that Defenders win
+                """,
+//                Average troops remaining will be %s%d%s vs %s%d%s
+            /*todo
+                * average troops I can try to just multiply the chances by the troops and see what that gets me
+                * 
+                * but I also wanted to try to calculate the average number of attacks to finish, and then
+                * calculate the chances at any point that someone loses a troop and add that up
+                * and see if that gets me anything different
+            */
+                getPercentageString(map.entrySet().stream()
+                        .filter(it -> it.getKey().second.equals(0))
+                        .mapToDouble(Map.Entry::getValue)
+                        .sum() * 100),
+                getPercentageString(map.entrySet().stream()
+                        .filter(it -> it.getKey().first.equals(0))
+                        .mapToDouble(Map.Entry::getValue)
+                        .sum() * 100)//,
+//                ATTACKING, /**/, RESET,
+//                DEFENDING, /**/, RESET
+                );
+
         System.out.printf("""
                     
                     %s%d%s vs %s%d%s
