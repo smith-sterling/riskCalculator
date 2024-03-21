@@ -4,7 +4,11 @@ import utils.Pair;
 import utils.Quad;
 import utils.Triple;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +48,7 @@ public class Take4 {
     private static final double MAGIC_3_2_TO_1_2 = 1 - MAGIC_3_2_TO_3_0 - MAGIC_3_2_TO_2_1;
     //endregion Two Casualties
 
-    private static final Comparator<Pair> comPAIRator = (first, second) -> {
+    private static final Comparator<Pair> printOrderComparator = (first, second) -> {
         int firstComparison = Integer.compare(first.first, second.first);
         if (firstComparison != 0) {
             return -firstComparison;
@@ -57,7 +61,7 @@ public class Take4 {
 
     private static final Map<Quad, Double> ops;
 
-    private static final Map<Pair, Map<Pair, Double>> battleChances = new TreeMap<>(comPAIRator);
+    private static final Map<Pair, Map<Pair, Double>> battleChances = new TreeMap<>(printOrderComparator);
 
 
     static {
@@ -109,7 +113,7 @@ public class Take4 {
     }
 
     public static Map<Pair, Double> inner(int a, int b) {
-        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
+        Map<Pair, Double> options = new TreeMap<>(printOrderComparator);
         ArrayDeque<Triple> queue = new ArrayDeque<>();
         queue.add(new Triple(a, b, 1.));
 
@@ -157,10 +161,12 @@ public class Take4 {
             if (a.equalsIgnoreCase("quit") || a.equalsIgnoreCase("exit")) break;
             try {
                 int i = Integer.parseInt(a), j = Integer.parseInt(b);
-                if (i <= 0 || j <= 0) throw new NumberFormatException("Bad number");
+                if (i <= 0) throw new NumberFormatException("Bad number: " + i);
+                if (j <= 0) throw new NumberFormatException("Bad number: " + j);
                 printOutcomes(outer(i, j));
             } catch (NumberFormatException e) {
-                e.printStackTrace();
+                System.out.println(e.toString());
+                System.out.println("Try again");
             }
         }
     }
@@ -189,25 +195,30 @@ public class Take4 {
                         Map.Entry::getKey,
                         Map.Entry::getValue,
                         (o1, o2) -> o1, //for collisions
-                        () -> new TreeMap<>(comPAIRator)
+                        () -> new TreeMap<>(printOrderComparator)
                 ));
 
+        printDivider();
         printVersusString(finalMap);
+        printDivider();
         printWinChances(finalMap);
-
         printRetainTroopStats(finalMap);
+        printDivider();
+
 
         if (finalMap.size() <= 50) {
-            // TODO: 3/20/24 make a cumulative detailed stats if some global flag is set from input
             printDetailedStats(finalMap);
+            printDivider();
         }
+    }
 
+    private static void printDivider() {
+        System.out.println("-".repeat(60));
     }
 
     private static void printVersusString(Map<Pair, Double> map) {
         System.out.printf("""
-                    
-                    %s%d%s vs %s%d%s
+                    \t\t\t\t\t%s%d%s vs %s%d%s
                     """,
                 ATTACKING, map.keySet().stream().max(Comparator.comparingInt(it -> it.first)).get().first, RESET,
                 DEFENDING, map.keySet().stream().max(Comparator.comparingInt(it -> it.second)).get().second, RESET
@@ -239,7 +250,7 @@ public class Take4 {
         Map<Pair, Double> winners = map.entrySet().stream()
                 .filter(it -> (attackersWin) ? it.getKey().first > 0 : it.getKey().second > 0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (o1, o2) -> o1,
-                        () -> new TreeMap<>(comPAIRator)));
+                        () -> new TreeMap<>(attackersWin ? printOrderComparator : null)));
         for (var entry : winners.entrySet()) {
             sum += entry.getValue();
             numTroops = Math.min(numTroops, (attackersWin) ? entry.getKey().first : entry.getKey().second);
@@ -249,13 +260,14 @@ public class Take4 {
         }
 
         System.out.printf("""
-                    %s chance %s will retain at least %s%d%s troops
+                    %s chance %s will retain at least %s%d%s %s
                 """,
                 getPercentageString(sum * 100),
                 attackersWin
                         ? ATTACKING + "Attackers" + RESET
                         : DEFENDING + "Defenders" + RESET,
-                attackersWin ? ATTACKING : DEFENDING, numTroops, RESET
+                attackersWin ? ATTACKING : DEFENDING, numTroops, RESET,
+                numTroops == 1 ? "troop" : "troops"
         );
     }
 
@@ -270,14 +282,34 @@ public class Take4 {
     }
 
     private static void printDetailedStats(Map<Pair, Double> map) {
+        Map<Pair, Double> cumulativeMap = getCumulativeMap(map);
         for (var after : map.entrySet()) {
             System.out.printf("""
-                            %s\t--\t%s%d%s vs %s%d%s
+                            %s\t--\t%s%d%s vs %s%d%s\t|\t%s -- %s%d%s vs %s%d%s
                         """,
                     getPercentageString(after.getValue() * 100),
                     ATTACKING, after.getKey().first, RESET,
-                    DEFENDING, after.getKey().second, RESET
+                    DEFENDING, after.getKey().second, RESET,
+                    getPercentageString(cumulativeMap.get(after.getKey()) * 100),
+                    ATTACKING, after.getKey().first, after.getKey().first > 0 ? "+" + RESET : RESET,
+                    DEFENDING, after.getKey().second, after.getKey().second > 0 ? "+" + RESET : RESET
             );
         }
+    }
+
+    private static Map<Pair, Double> getCumulativeMap(Map<Pair, Double> map) {
+        Map<Pair, Double> cumulativeMap = new TreeMap<>(printOrderComparator);
+        Map<Pair, Double> sumOrderMap = new TreeMap<>(map);
+        double sumAttackers = 0, sumDefenders = 0;
+        for (var entry : sumOrderMap.entrySet()) {
+            if (entry.getKey().first == 0) {
+                sumDefenders += entry.getValue();
+                cumulativeMap.put(entry.getKey(), sumDefenders);
+            } else if (entry.getKey().second == 0) {
+                sumAttackers += entry.getValue();
+                cumulativeMap.put(entry.getKey(), sumAttackers);
+            }
+        }
+        return cumulativeMap;
     }
 }
