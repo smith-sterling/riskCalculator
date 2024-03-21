@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import static java.lang.Math.min;
 import static utils.Pair.p;
@@ -107,116 +108,7 @@ public class Take4 {
         return battleChances.get(p(a, b));
     }
 
-//    public static Map<Pair, Double> otherInner(int a, int b) {
-//        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
-//        ArrayDeque<Triple> queue = new ArrayDeque<>();
-//        queue.add(new Triple(a, b, 1.));
-//
-//        double totalProbabilityMass = 0.0; // Total probability mass for (x, 0) and (0, y) outcomes
-//
-//        while (!queue.isEmpty()) {
-//            Triple curr = queue.pop();
-//            int acurr = curr.first, bcurr = curr.second;
-//            double ccurr = curr.third;
-//
-//            Double d;
-//            Pair p = p(acurr, bcurr);
-//            if (options.containsKey(p)) {
-//                d = options.get(p);
-//                d *= ccurr;
-//            } else {
-//                d = ccurr;
-//                options.put(p(acurr, bcurr), d);
-//            }
-//
-//            if (acurr <= 0 || bcurr <= 0) {
-//                totalProbabilityMass += d; // Accumulate probability mass for (x, 0) and (0, y) outcomes
-//                continue; // Skip further calculations if one of the troops is depleted
-//            }
-//
-//            int deaths = calcDeaths(acurr, bcurr);
-//            if (deaths == 0) continue; // No deaths, nothing to calculate
-//
-//            for (var cas : deaths == 1 ? oneCasOps : twoCasOps) {
-//                var probNext = ccurr * chanceInOut(acurr, bcurr, acurr - cas.first, bcurr - cas.second);
-//                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
-//            }
-//        }
-//
-//        // Normalize probabilities for (x, 0) and (0, y) outcomes
-//        for (Map.Entry<Pair, Double> entry : options.entrySet()) {
-//            Pair pair = entry.getKey();
-//            if (pair.first == 0 || pair.second == 0) {
-//                entry.setValue(entry.getValue() / totalProbabilityMass);
-//            }
-//        }
-//
-//        return options;
-//    }
-
-
     public static Map<Pair, Double> inner(int a, int b) {
-        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
-        ArrayDeque<Triple> queue = new ArrayDeque<>();
-        queue.add(new Triple(a, b, 1.));
-
-        while (!queue.isEmpty()) {
-            Triple curr = queue.pop();
-            int acurr = curr.first, bcurr = curr.second;
-            double ccurr = curr.third;
-
-            Double d;
-            Pair p = p(acurr, bcurr);
-            if (options.containsKey(p)) {
-                d = options.get(p);
-                d *= ccurr;
-            } else {
-                d = ccurr;
-                options.put(p(acurr, bcurr), d);
-            }
-
-            if (acurr <= 0 || bcurr <= 0) continue; // Skip further calculations if one of the troops is depleted
-            int deaths = calcDeaths(acurr, bcurr);
-            if (deaths == 0) continue; // No deaths, nothing to calculate
-            for (var cas : deaths == 1 ? oneCasOps : twoCasOps) {
-                var probNext = ccurr * chanceInOut(acurr, bcurr, acurr - cas.first, bcurr - cas.second);
-                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
-            }
-        }
-
-        return options;
-    }
-
-    public static Map<Pair, Double> inner2(int a, int b) {
-        Map<Pair, Double> options = new TreeMap<>(comPAIRator);
-        ArrayDeque<Triple> queue = new ArrayDeque<>();
-        queue.add(new Triple(a, b, 1.));
-
-        while (!queue.isEmpty()) {
-            Triple curr = queue.pop();
-            int acurr = curr.first, bcurr = curr.second;
-            double ccurr = curr.third;
-
-            Pair p = p(acurr, bcurr);
-            if (options.containsKey(p)) {
-                options.put(p, options.get(p) + ccurr); // Update probability by adding
-            } else {
-                options.put(p, ccurr);
-            }
-
-            if (acurr <= 0 || bcurr <= 0) continue; // Skip further calculations if one of the troops is depleted
-            int deaths = calcDeaths(acurr, bcurr);
-            if (deaths == 0) continue; // No deaths, nothing to calculate
-            for (var cas : deaths == 1 ? oneCasOps : twoCasOps) {
-                double probNext = ccurr * chanceInOut(acurr, bcurr, acurr - cas.first, bcurr - cas.second);
-                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
-            }
-        }
-
-        return options;
-    }
-
-    public static Map<Pair, Double> inner3(int a, int b) {
         Map<Pair, Double> options = new TreeMap<>(comPAIRator);
         ArrayDeque<Triple> queue = new ArrayDeque<>();
         queue.add(new Triple(a, b, 1.));
@@ -242,7 +134,6 @@ public class Take4 {
                                 .findFirst()
                                 .ifPresentOrElse(it -> it.third += probNext,
                                                 () -> queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext)));
-//                queue.add(new Triple(acurr - cas.first, bcurr - cas.second, probNext));
             }
         }
 
@@ -254,11 +145,12 @@ public class Take4 {
         Scanner s = new Scanner(System.in);
         System.out.println("""
                 Please enter two positive integers for
-                the number of attacking troops and
-                the number of defending troops
-                for Risk, and we will calculate the chance of every outcome
+                    the number of attacking troops and
+                    the number of defending troops
+                    for Risk, and we will calculate the chance of every outcome
                 """);
         while (true) {
+            System.out.println();
             String a = s.next();
             if (a.equalsIgnoreCase("quit") || a.equalsIgnoreCase("exit")) break;
             String b = s.next();
@@ -266,13 +158,7 @@ public class Take4 {
             try {
                 int i = Integer.parseInt(a), j = Integer.parseInt(b);
                 if (i <= 0 || j <= 0) throw new NumberFormatException("Bad number");
-//                printOutcomes(outer(i, j));
-//                System.out.println("inner:");
-//                printOutcomes(inner(i, j));
-//                System.out.println("inner2:");
-//                printOutcomes(inner2(i, j));
-                System.out.println("inner3:");
-                printOutcomes(inner3(i, j));
+                printOutcomes(outer(i, j));
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }
@@ -284,7 +170,7 @@ public class Take4 {
     private static final String RESET = "\u001B[0m";
     private static String getPercentageString(double percentage) {
         String something =
-                percentage > 50 ? "\u001B[38;5;46m" :
+                percentage > 45 ? "\u001B[38;5;46m" :
                 percentage > 20 ? "\u001B[38;5;40m" :
                 percentage > 10 ? "\u001B[38;5;34m" :
                 percentage > 3 ? "\u001B[38;5;28m" : "\u001B[38;5;22m";
@@ -297,36 +183,28 @@ public class Take4 {
         }
     }
     private static void printOutcomes(Map<Pair, Double> map) {
-        System.out.println("Sum = " + map.entrySet().stream()
+        Map<Pair, Double> finalMap = map.entrySet().stream()
                 .filter(it -> !(it.getKey().first > 0 && it.getKey().second > 0))
-                .mapToDouble(Map.Entry::getValue)
-                .sum());
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (o1, o2) -> o1, //for collisions
+                        () -> new TreeMap<>(comPAIRator)
+                ));
 
+        printVersusString(finalMap);
+        printWinChances(finalMap);
 
-        System.out.printf("""
-                Chances are %s that Attackers win
-                and %s that Defenders win
-                """,
-//                Average troops remaining will be %s%d%s vs %s%d%s
-            /*todo
-                * average troops I can try to just multiply the chances by the troops and see what that gets me
-                * 
-                * but I also wanted to try to calculate the average number of attacks to finish, and then
-                * calculate the chances at any point that someone loses a troop and add that up
-                * and see if that gets me anything different
-            */
-                getPercentageString(map.entrySet().stream()
-                        .filter(it -> it.getKey().second.equals(0))
-                        .mapToDouble(Map.Entry::getValue)
-                        .sum() * 100),
-                getPercentageString(map.entrySet().stream()
-                        .filter(it -> it.getKey().first.equals(0))
-                        .mapToDouble(Map.Entry::getValue)
-                        .sum() * 100)//,
-//                ATTACKING, /**/, RESET,
-//                DEFENDING, /**/, RESET
-                );
+        printRetainTroopStats(finalMap);
 
+        if (finalMap.size() <= 50) {
+            // TODO: 3/20/24 make a cumulative detailed stats if some global flag is set from input
+            printDetailedStats(finalMap);
+        }
+
+    }
+
+    private static void printVersusString(Map<Pair, Double> map) {
         System.out.printf("""
                     
                     %s%d%s vs %s%d%s
@@ -334,8 +212,65 @@ public class Take4 {
                 ATTACKING, map.keySet().stream().max(Comparator.comparingInt(it -> it.first)).get().first, RESET,
                 DEFENDING, map.keySet().stream().max(Comparator.comparingInt(it -> it.second)).get().second, RESET
         );
+    }
+
+    private static void printWinChances(Map<Pair, Double> map) {
+        System.out.printf("""
+                    %s %sAttackers%s and %s %sDefenders%s
+                """,
+                getPercentageString(map.entrySet().stream()
+                                            .filter(it -> it.getKey().second.equals(0))
+                                            .mapToDouble(Map.Entry::getValue)
+                                            .sum() * 100),
+                ATTACKING, RESET,
+                getPercentageString(map.entrySet().stream()
+                                            .filter(it -> it.getKey().first.equals(0))
+                                            .mapToDouble(Map.Entry::getValue)
+                                            .sum() * 100),
+                DEFENDING, RESET
+        );
+    }
+
+    private static void printRetainTroopStats(Map<Pair, Double> map) {
+        boolean attackersWin = isAttackersWin(map);
+
+        double sum = 0.0;
+        int numTroops = Integer.MAX_VALUE;
+        Map<Pair, Double> winners = map.entrySet().stream()
+                .filter(it -> (attackersWin) ? it.getKey().first > 0 : it.getKey().second > 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (o1, o2) -> o1,
+                        () -> new TreeMap<>(comPAIRator)));
+        for (var entry : winners.entrySet()) {
+            sum += entry.getValue();
+            numTroops = Math.min(numTroops, (attackersWin) ? entry.getKey().first : entry.getKey().second);
+            if (sum > 0.5) {
+                break;
+            }
+        }
+
+        System.out.printf("""
+                    %s chance %s will retain at least %s%d%s troops
+                """,
+                getPercentageString(sum * 100),
+                attackersWin
+                        ? ATTACKING + "Attackers" + RESET
+                        : DEFENDING + "Defenders" + RESET,
+                attackersWin ? ATTACKING : DEFENDING, numTroops, RESET
+        );
+    }
+
+    private static boolean isAttackersWin(Map<Pair, Double> map) {
+        return map.entrySet().stream()
+                       .filter(it -> it.getKey().first > 0)
+                       .mapToDouble(Map.Entry::getValue).sum()
+               >
+               map.entrySet().stream()
+                       .filter(it -> it.getKey().second > 0)
+                       .mapToDouble(Map.Entry::getValue).sum();
+    }
+
+    private static void printDetailedStats(Map<Pair, Double> map) {
         for (var after : map.entrySet()) {
-            if (after.getKey().first > 0 && after.getKey().second > 0) continue;
             System.out.printf("""
                             %s\t--\t%s%d%s vs %s%d%s
                         """,
