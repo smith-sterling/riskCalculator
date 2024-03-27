@@ -4,11 +4,7 @@ import utils.Pair;
 import utils.Quad;
 import utils.Triple;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +16,7 @@ import java.util.stream.Collectors;
 import static java.lang.Math.min;
 import static utils.Pair.p;
 
-public class Take4 {
+public class RiskCalculator {
 
     private static int numWays(int numDice) { return (int) Math.pow(6, numDice); }
 
